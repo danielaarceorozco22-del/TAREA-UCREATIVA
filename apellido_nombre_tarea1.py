@@ -18,6 +18,7 @@
 import csv
 import os
 import sys
+import textwrap
 from datetime import datetime
 
 
@@ -41,9 +42,9 @@ COLUMNAS_HISTORIAL = [
 # Aviso obligatorio para este tema: se muestra al inicio y al final de cada
 # consulta.
 AVISO_SALUD = (
-    "AVISO: este sistema da consejos GENERALES de actividad física, no consejos\n"
-    "médicos. No sustituye la valoración de un profesional de la salud.\n"
-    "Si al hacer ejercicio siente dolor en el pecho, mareo o falta de aire,\n"
+    "Este sistema da consejos GENERALES de actividad física, no consejos "
+    "médicos. No sustituye la valoración de un profesional de la salud. "
+    "Si al hacer ejercicio siente dolor en el pecho, mareo o falta de aire, "
     "deténgase y busque atención médica."
 )
 
@@ -291,17 +292,24 @@ REGLAS = [
 
 
 # -----------------------------------------------------------------------------
-# 4. FUNCIONES AUXILIARES: COLORES Y HISTORIAL
+# 4. FUNCIONES AUXILIARES: PRESENTACIÓN (COLORES Y SÍMBOLOS) E HISTORIAL
 # -----------------------------------------------------------------------------
 
-# Códigos ANSI para dar color al texto en la terminal.
-CODIGOS_COLOR = {
-    "titulo": "\033[1;36m",       # cian en negrita
-    "aviso": "\033[1;33m",        # amarillo en negrita
-    "ok": "\033[1;32m",           # verde en negrita
-    "error": "\033[1;31m",        # rojo en negrita
-    "regla": "\033[35m",          # magenta
-    "tenue": "\033[2m",           # texto atenuado
+# Ancho máximo, en caracteres, de cualquier línea que imprime el programa.
+ANCHO = 72
+
+# Paleta semántica: cada color tiene UN solo significado. Solo se usa a
+# través de la función color(); ninguna otra parte del código escribe
+# códigos ANSI.
+PALETA = {
+    "titulo": "\033[1;36m",    # encabezados de sección (negrita + cian)
+    "pregunta": "\033[1m",     # texto de cada pregunta (negrita)
+    "opcion": "\033[36m",      # número de cada opción (cian)
+    "error": "\033[31m",       # entrada no válida (rojo)
+    "exito": "\033[1;32m",     # recomendación principal (negrita + verde)
+    "certeza": "\033[33m",     # barras y valores de certeza (amarillo)
+    "aviso": "\033[1;33m",     # aviso de salud (amarillo en negrita, nunca tenue)
+    "tenue": "\033[2m",        # texto secundario y separadores (atenuado)
 }
 FIN_COLOR = "\033[0m"
 
@@ -347,19 +355,89 @@ def decidir_colores():
 USAR_COLORES = decidir_colores()
 
 
-def colorear(texto, estilo):
-    """Devuelve el texto con el color indicado, o sin cambios si no hay colores."""
-    if not USAR_COLORES or estilo not in CODIGOS_COLOR:
+def color(texto, rol):
+    """Única función que pone color: aplica el color del rol indicado.
+
+    Si los colores están desactivados o el rol no existe en PALETA,
+    devuelve el texto sin cambios.
+    """
+    if not USAR_COLORES or rol not in PALETA:
         return texto
-    return CODIGOS_COLOR[estilo] + texto + FIN_COLOR
+    return PALETA[rol] + texto + FIN_COLOR
+
+
+# Símbolos de dibujo. Si la salida no puede escribir Unicode (por ejemplo,
+# una consola antigua de Windows), se usan sus equivalentes en ASCII.
+SIMBOLOS_UNICODE = {"linea": "─", "lleno": "█", "vacio": "░", "rama": "├─",
+                    "ultima": "└─", "tronco": "│ ", "flecha": "→", "punto": "·"}
+SIMBOLOS_ASCII = {"linea": "-", "lleno": "#", "vacio": ".", "rama": "|-",
+                  "ultima": "`-", "tronco": "| ", "flecha": "->", "punto": "*"}
+
+
+def elegir_simbolos():
+    """Devuelve los símbolos Unicode si la codificación de la salida los
+    admite; si no, devuelve la versión ASCII."""
+    codificacion = getattr(sys.stdout, "encoding", None) or "ascii"
+    try:
+        "".join(SIMBOLOS_UNICODE.values()).encode(codificacion)
+        return SIMBOLOS_UNICODE
+    except (UnicodeEncodeError, LookupError):
+        return SIMBOLOS_ASCII
+
+
+SIMBOLOS = elegir_simbolos()
+
+
+def ajustar(texto, sangria=2, sangria_siguientes=None):
+    """Parte un texto largo en líneas de máximo ANCHO caracteres.
+
+    sangria: espacios (o texto) al inicio de la primera línea.
+    sangria_siguientes: lo mismo para las demás líneas (por defecto, igual).
+    """
+    if isinstance(sangria, int):
+        sangria = " " * sangria
+    if sangria_siguientes is None:
+        sangria_siguientes = sangria
+    elif isinstance(sangria_siguientes, int):
+        sangria_siguientes = " " * sangria_siguientes
+    return textwrap.wrap(texto, width=ANCHO, initial_indent=sangria,
+                         subsequent_indent=sangria_siguientes)
+
+
+def barra_certeza(certeza):
+    """Barra de 10 bloques: un bloque lleno por cada 10 puntos de certeza."""
+    llenos = certeza // 10
+    return SIMBOLOS["lleno"] * llenos + SIMBOLOS["vacio"] * (10 - llenos)
+
+
+def linea_separadora():
+    """Una línea horizontal del ancho máximo, como segmento de texto."""
+    return [(SIMBOLOS["linea"] * ANCHO, "tenue")]
+
+
+# Las funciones que ARMAN texto devuelven una lista de líneas. Cada línea es a
+# su vez una lista de segmentos (texto, rol). Así la consola puede pintar cada
+# segmento con color() y la ventana gráfica con sus propias etiquetas.
+
+def lineas_aviso():
+    """Arma el aviso de salud enmarcado (se muestra al inicio y al final)."""
+    marco = [(SIMBOLOS["linea"] * ANCHO, "aviso")]
+    lineas = [marco, [(" AVISO DE SALUD", "aviso")]]
+    for texto in ajustar(AVISO_SALUD, 1):
+        lineas.append([(texto, "aviso")])
+    lineas.append(marco)
+    return lineas
+
+
+def imprimir_lineas(lineas):
+    """Imprime en la consola una lista de líneas formadas por segmentos."""
+    for segmentos in lineas:
+        print("".join(color(texto, rol) for texto, rol in segmentos))
 
 
 def mostrar_aviso():
-    """Imprime el aviso de salud enmarcado y en color de advertencia."""
-    linea = "-" * 72
-    print(colorear(linea, "aviso"))
-    print(colorear(AVISO_SALUD, "aviso"))
-    print(colorear(linea, "aviso"))
+    """Imprime el aviso de salud enmarcado y en el color de aviso."""
+    imprimir_lineas(lineas_aviso())
 
 
 def guardar_historial(respuestas, resultado, ruta=ARCHIVO_HISTORIAL):
@@ -400,7 +478,7 @@ def guardar_historial(respuestas, resultado, ruta=ARCHIVO_HISTORIAL):
             escritor.writerow(fila)
         return True
     except OSError as error:
-        print(colorear("No se pudo guardar el historial (%s). "
+        print(color("No se pudo guardar el historial (%s). "
                        "El programa continúa." % error, "error"))
         return False
 
@@ -420,40 +498,43 @@ def leer_si_no(mensaje):
             return "si"
         if texto in ("n", "no"):
             return "no"
-        print(colorear("Respuesta inválida. Escriba s (sí) o n (no).", "error"))
+        print(color("  Respuesta no válida. Escriba s (sí) o n (no).", "error"))
 
 
-def preguntar(pregunta):
+def preguntar(pregunta, numero=1, total=1):
     """Hace una pregunta de la lista PREGUNTAS y devuelve el valor interno.
 
-    Repite la pregunta hasta recibir una respuesta válida:
+    Muestra el progreso ("Pregunta 3 de 8") y repite la pregunta hasta
+    recibir una respuesta válida:
       - tipo "menu": un número entre 1 y la cantidad de opciones;
       - tipo "sn":   s / si / sí / n / no (sin importar mayúsculas).
     Ctrl+C y fin de entrada (EOF) no se atrapan aquí: los maneja main().
     """
     print()
-    print(colorear(pregunta["texto"], "titulo"))
+    print(color("Pregunta %d de %d" % (numero, total), "tenue"))
+    for linea in ajustar(pregunta["texto"], 0):
+        print(color(linea, "pregunta"))
     opciones = pregunta["opciones"]
 
     if pregunta["tipo"] == "sn":
-        return leer_si_no("Responda s/n: ")
+        return leer_si_no("Responda s (sí) o n (no): ")
 
-    # Pregunta de menú numerado
-    for numero, (_, etiqueta) in enumerate(opciones, start=1):
-        print("  %d. %s" % (numero, etiqueta))
+    # Pregunta de menú numerado: opciones alineadas con sangría de 2 espacios.
+    for indice, (_, etiqueta) in enumerate(opciones, start=1):
+        print("  " + color("%d." % indice, "opcion") + " " + etiqueta)
     while True:
         texto = input("Elija una opción: ").strip()
         if texto.isdigit() and 1 <= int(texto) <= len(opciones):
             return opciones[int(texto) - 1][0]
-        print(colorear("Opción inválida. Escriba un número del 1 al %d."
-                       % len(opciones), "error"))
+        print(color("  Opción no válida. Escriba un número del 1 al %d."
+                    % len(opciones), "error"))
 
 
 def hacer_consulta():
     """Recorre todas las preguntas y devuelve un diccionario {clave: valor}."""
     respuestas = {}
-    for pregunta in PREGUNTAS:
-        respuestas[pregunta["clave"]] = preguntar(pregunta)
+    for numero, pregunta in enumerate(PREGUNTAS, start=1):
+        respuestas[pregunta["clave"]] = preguntar(pregunta, numero, len(PREGUNTAS))
     return respuestas
 
 
@@ -574,41 +655,70 @@ def evaluar(respuestas, reglas):
 # -----------------------------------------------------------------------------
 # 7. MOSTRAR EL RESULTADO Y EXPLICAR LA DECISIÓN (estilo MYCIN)
 # -----------------------------------------------------------------------------
-# Las funciones lineas_resultado() y lineas_explicacion() solo ARMAN el texto
-# como una lista de pares (texto, estilo). Así el mismo contenido se puede
-# imprimir en la consola (con colores ANSI) o mostrar en la ventana gráfica.
+# Estas funciones solo ARMAN el texto (listas de líneas con segmentos
+# (texto, rol)); no cambian nada de la evaluación. La consola y la ventana
+# gráfica muestran exactamente el mismo contenido.
+
+def linea_con_certeza(texto, certeza, rol):
+    """Pone el texto a la izquierda y "certeza ████████░░ 80" a la derecha.
+
+    Si no caben juntos en ANCHO caracteres, la barra baja a la línea siguiente.
+    """
+    cola = "certeza %s %3d" % (barra_certeza(certeza), certeza)
+    if len(texto) + 2 + len(cola) <= ANCHO:
+        relleno = " " * (ANCHO - len(texto) - len(cola))
+        return [[(texto, rol), (relleno, None), (cola, "certeza")]]
+    return [[(texto, rol)], [(" " * (ANCHO - len(cola)), None), (cola, "certeza")]]
+
 
 def lineas_resultado(resultado):
-    """Arma las líneas con la recomendación principal y las alternativas.
+    """Arma la recomendación principal y las alternativas ordenadas.
 
-    Si ninguna regla final se activó, lo dice con claridad, sin inventar.
+    Si ninguna regla final se activó, lo dice con calma, sin inventar: muestra
+    qué respuestas se evaluaron y que ninguna regla las cubre.
     """
-    lineas = [("=" * 72, "titulo")]
+    lineas = [linea_separadora()]
     conclusiones = resultado["conclusiones"]
 
     if not conclusiones:
-        lineas.append(("SIN CONCLUSIÓN", "error"))
-        lineas.append(("Ninguna regla final se cumplió con sus respuestas, así que el sistema", None))
-        lineas.append(("no puede darle una recomendación. Las reglas de este sistema cubren", None))
-        lineas.append(("a personas adultas (18 años o más); su caso queda fuera de lo que sabe.", None))
-        lineas.append(("=" * 72, "titulo"))
+        lineas.append([("SIN CONCLUSIÓN", "titulo")])
+        lineas += [[(t, None)] for t in ajustar(
+            "Ninguna regla final cubre esta combinación de respuestas, así que "
+            "el sistema no le dará una recomendación inventada. Es una "
+            "limitación del sistema, no un error suyo.", 2)]
+        lineas.append([])
+        lineas.append([("  Respuestas que se evaluaron:", None)])
+        for pregunta in PREGUNTAS:
+            hecho = resultado["hechos"].get(pregunta["clave"])
+            if hecho and hecho["origen"] == "usuario":
+                etiqueta = dict(pregunta["opciones"])[hecho["valor"]]
+                texto = "%s %s = %s (%s)" % (SIMBOLOS["punto"], pregunta["clave"],
+                                             hecho["valor"], etiqueta)
+                lineas += [[(t, None)] for t in ajustar(texto, 2, 4)]
+        edad = resultado["hechos"].get("edad")
+        if edad and edad["valor"] == "menor_18":
+            lineas.append([])
+            lineas += [[(t, None)] for t in ajustar(
+                "Las reglas de este sistema solo tienen planes para personas de "
+                "18 años o más.", 2)]
+        lineas.append(linea_separadora())
         return lineas
 
     principal = conclusiones[0]
     datos = CONCLUSIONES[principal["clave"]]
-    lineas.append(("RECOMENDACIÓN PRINCIPAL (certeza %d/100):" % principal["certeza"], "ok"))
-    lineas.append(("  " + datos["titulo"], "ok"))
-    lineas.append(("  " + datos["detalle"], None))
+    lineas.append([("RECOMENDACIÓN PRINCIPAL", "titulo")])
+    lineas += linea_con_certeza("  " + datos["titulo"], principal["certeza"], "exito")
+    lineas += [[(t, None)] for t in ajustar(datos["detalle"], 2)]
 
     if len(conclusiones) > 1:
-        lineas.append(("", None))
-        lineas.append(("Alternativas (ordenadas por certeza):", "titulo"))
-        for numero, alternativa in enumerate(conclusiones[1:], start=1):
+        lineas.append([])
+        lineas.append([("OTRAS OPCIONES (ordenadas por certeza)", "titulo")])
+        for alternativa in conclusiones[1:]:
             datos = CONCLUSIONES[alternativa["clave"]]
-            lineas.append(("  %d. %s (certeza %d/100)" % (numero, datos["titulo"],
-                                                          alternativa["certeza"]), None))
-            lineas.append(("     " + datos["detalle"], None))
-    lineas.append(("=" * 72, "titulo"))
+            lineas += linea_con_certeza("  %s %s" % (SIMBOLOS["punto"], datos["titulo"]),
+                                        alternativa["certeza"], None)
+            lineas += [[(t, "tenue")] for t in ajustar(datos["detalle"], 4)]
+    lineas.append(linea_separadora())
     return lineas
 
 
@@ -620,35 +730,62 @@ def texto_condicion(clave, valor, origen):
 
 
 def lineas_explicacion(resultado):
-    """Arma la explicación al estilo MYCIN.
+    """Arma la explicación al estilo MYCIN, como un árbol.
 
-    1. Cada regla que se activó, con las respuestas o hechos que la
-       provocaron y lo que produjo.
+    1. Cada regla que se activó, en orden: "Se activó R# porque: ..." y, debajo,
+       lo que produjo (hecho intermedio o recomendación) con su certeza.
     2. La cadena de hechos intermedios: qué regla produjo cada hecho y qué
        reglas lo usaron después.
     """
     activadas = resultado["activadas"]
-    lineas = [("¿Por qué?", "titulo")]
+    lineas = [[("¿POR QUÉ?", "titulo"),
+               ("  reglas que se activaron, en orden", "tenue")]]
     if not activadas:
-        lineas.append(("  No se activó ninguna regla.", None))
+        lineas.append([("  No se activó ninguna regla.", None)])
         return lineas
 
-    for activada in activadas:
+    for numero, activada in enumerate(activadas):
+        es_ultima = numero == len(activadas) - 1
+        rama = "  " + (SIMBOLOS["ultima"] if es_ultima else SIMBOLOS["rama"]) + " "
+        tronco = "  " + ("  " if es_ultima else SIMBOLOS["tronco"]) + " "
+
+        # Línea "Se activó R# porque: ..." (puede ocupar varias líneas).
         condiciones = " y ".join(texto_condicion(c, v, o)
                                  for c, v, o in activada["condiciones"])
+        texto = "Se activó %s porque: %s" % (activada["id"], condiciones)
+        for linea in ajustar(texto, rama, tronco + "    "):
+            ancho_prefijo = len(rama) if linea.startswith(rama) else len(tronco)
+            lineas.append([(linea[:ancho_prefijo], "tenue"), (linea[ancho_prefijo:], None)])
+
+        # Línea de lo que produjo la regla, con la certeza alineada a la derecha.
         clave, valor = activada["produce"]
         if activada["tipo"] == "final":
             produce = "recomienda: %s" % CONCLUSIONES[valor]["titulo"]
+            rol = "exito"
         else:
             produce = "hecho intermedio: %s = %s" % (clave, valor)
-        lineas.append(("  - Se activó %s porque: %s" % (activada["id"], condiciones), "regla"))
-        lineas.append(("      -> %s (certeza %d)" % (produce, activada["certeza"]), None))
+            rol = None
+        certeza = "(certeza %d)" % activada["certeza"]
+        partes = ajustar("%s %s" % (SIMBOLOS["flecha"], produce),
+                         tronco + "    ", tronco + "      ")
+        for linea in partes[:-1]:
+            lineas.append([(tronco, "tenue"), (linea[len(tronco):], rol)])
+        ultima = partes[-1]
+        if len(ultima) + 2 + len(certeza) <= ANCHO:
+            relleno = " " * (ANCHO - len(ultima) - len(certeza))
+            lineas.append([(tronco, "tenue"), (ultima[len(tronco):], rol),
+                           (relleno, None), (certeza, "certeza")])
+        else:
+            lineas.append([(tronco, "tenue"), (ultima[len(tronco):], rol)])
+            relleno = " " * (ANCHO - len(tronco) - len(certeza))
+            lineas.append([(tronco, "tenue"), (relleno, None), (certeza, "certeza")])
 
     # Cadena de encadenamiento: hechos intermedios, quién los produjo y quién los usó.
     intermedias = [a for a in activadas if a["tipo"] == "intermedia"]
     if intermedias:
-        lineas.append(("", None))
-        lineas.append(("Cadena de hechos intermedios (encadenamiento hacia adelante):", "titulo"))
+        lineas.append([])
+        lineas.append([("CADENA DE RAZONAMIENTO", "titulo"),
+                       ("  hechos intermedios encadenados", "tenue")])
         vistos = []
         for activada in intermedias:
             if activada["produce"] not in vistos:
@@ -658,18 +795,14 @@ def lineas_explicacion(resultado):
             usuarias = [a["id"] for a in activadas
                         if any(c == clave for c, _, _ in a["condiciones"])]
             usado = ", ".join(usuarias) if usuarias else "ninguna regla"
-            lineas.append(("  - %s = %s: lo produjo %s; lo usó %s"
-                           % (clave, valor, ", ".join(productoras), usado), None))
-    lineas.append(("", None))
-    lineas.append(("Certeza: la de una cadena es el mínimo de sus eslabones; si varias "
-                   "reglas llegan a lo mismo, se toma la más alta.", "tenue"))
+            texto = "%s %s = %s: lo produjo %s; lo usó %s" % (
+                SIMBOLOS["punto"], clave, valor, ", ".join(productoras), usado)
+            lineas += [[(t, None)] for t in ajustar(texto, 2, 4)]
+    lineas.append([])
+    lineas += [[(t, "tenue")] for t in ajustar(
+        "Certeza: la de una cadena es el mínimo de sus eslabones; si varias "
+        "reglas llegan a lo mismo, se toma la más alta.", 0)]
     return lineas
-
-
-def imprimir_lineas(lineas):
-    """Imprime en la consola una lista de pares (texto, estilo) con colores."""
-    for texto, estilo in lineas:
-        print(colorear(texto, estilo) if estilo else texto)
 
 
 def mostrar_resultado(resultado):
@@ -768,7 +901,7 @@ def ejecutar_pruebas():
     conclusiones (y su orden y certeza) con lo esperado.
     Devuelve 0 si todos pasan y 1 si alguno falla (código de salida).
     """
-    print(colorear("Ejecutando %d casos de prueba..." % len(CASOS_PRUEBA), "titulo"))
+    print(color("Ejecutando %d casos de prueba..." % len(CASOS_PRUEBA), "titulo"))
     aprobados = 0
     for caso in CASOS_PRUEBA:
         resultado = evaluar(caso["respuestas"], REGLAS)
@@ -776,7 +909,7 @@ def ejecutar_pruebas():
         pasa = obtenido == caso["esperado"]
         if pasa:
             aprobados += 1
-        estado = colorear("PASA ", "ok") if pasa else colorear("FALLA", "error")
+        estado = color("PASA ", "exito") if pasa else color("FALLA", "error")
         print()
         print("[%s] %s" % (estado, caso["nombre"]))
         print("   Teclas:   %s" % " ".join(respuestas_a_teclas(caso["respuestas"])))
@@ -787,7 +920,7 @@ def ejecutar_pruebas():
     print()
     resumen = "Resumen: %d de %d casos pasan." % (aprobados, len(CASOS_PRUEBA))
     todos = aprobados == len(CASOS_PRUEBA)
-    print(colorear(resumen, "ok" if todos else "error"))
+    print(color(resumen, "exito" if todos else "error"))
     return 0 if todos else 1
 
 
@@ -805,9 +938,10 @@ COLORES_GUI = {
     "aviso_fondo": "#fff4ce",
     "aviso_texto": "#5c4400",
     "titulo": "#0b5c75",
-    "ok": "#1b6e2d",
+    "exito": "#1b6e2d",
+    "certeza": "#8a6100",
+    "opcion": "#0b5c75",
     "error": "#b3261e",
-    "regla": "#6a2c91",
     "tenue": "#666666",
     "boton": "#0b5c75",
 }
@@ -830,7 +964,7 @@ class VentanaRecomendador:
         raiz.configure(bg=COLORES_GUI["fondo"])
 
         # Aviso de salud fijo en la parte superior (visible siempre).
-        tk.Label(raiz, text=AVISO_SALUD.replace("\n", " "), wraplength=760,
+        tk.Label(raiz, text="AVISO DE SALUD: " + AVISO_SALUD, wraplength=760,
                  justify="left", bg=COLORES_GUI["aviso_fondo"],
                  fg=COLORES_GUI["aviso_texto"], font=("Helvetica", 10, "bold"),
                  padx=12, pady=8).pack(fill="x")
@@ -955,27 +1089,30 @@ class VentanaRecomendador:
         # Etiquetas de formato equivalentes a los colores de la consola.
         texto.tag_configure("titulo", foreground=COLORES_GUI["titulo"],
                             font=("Courier", 10, "bold"))
-        texto.tag_configure("ok", foreground=COLORES_GUI["ok"], font=("Courier", 11, "bold"))
+        texto.tag_configure("exito", foreground=COLORES_GUI["exito"],
+                            font=("Courier", 10, "bold"))
+        texto.tag_configure("certeza", foreground=COLORES_GUI["certeza"])
         texto.tag_configure("error", foreground=COLORES_GUI["error"],
                             font=("Courier", 11, "bold"))
-        texto.tag_configure("regla", foreground=COLORES_GUI["regla"])
         texto.tag_configure("tenue", foreground=COLORES_GUI["tenue"])
         texto.tag_configure("aviso", foreground=COLORES_GUI["aviso_texto"],
                             background=COLORES_GUI["aviso_fondo"])
 
-        lineas = lineas_resultado(resultado) + [("", None)] + lineas_explicacion(resultado)
-        lineas += [("", None), (AVISO_SALUD, "aviso")]   # aviso al final de la consulta
-        for linea, estilo in lineas:
-            texto.insert("end", linea + "\n", estilo or ())
+        lineas = lineas_resultado(resultado) + [[]] + lineas_explicacion(resultado)
+        lineas += [[]] + lineas_aviso()          # aviso al final de la consulta
+        for segmentos in lineas:
+            for parte, rol in segmentos:
+                texto.insert("end", parte, rol or ())
+            texto.insert("end", "\n")
         texto.config(state="disabled")                  # solo lectura
 
         # Historial: si falla, se avisa en la ventana y se sigue.
         if guardar_historial(respuestas, resultado):
-            estado, color = "Consulta guardada en %s." % ARCHIVO_HISTORIAL, "tenue"
+            estado, rol_estado = "Consulta guardada en %s." % ARCHIVO_HISTORIAL, "tenue"
         else:
-            estado, color = "No se pudo guardar el historial.", "error"
+            estado, rol_estado = "No se pudo guardar el historial.", "error"
         tk.Label(self.contenido, text=estado, bg=COLORES_GUI["fondo"],
-                 fg=COLORES_GUI[color], font=("Helvetica", 10)).pack(anchor="w", pady=(6, 0))
+                 fg=COLORES_GUI[rol_estado], font=("Helvetica", 10)).pack(anchor="w", pady=(6, 0))
 
         # Equivalente de "¿Desea hacer otra consulta? (s/n)".
         pie = tk.Frame(self.contenido, bg=COLORES_GUI["fondo"])
@@ -993,19 +1130,29 @@ class VentanaRecomendador:
 
 
 def iniciar_interfaz_grafica():
-    """Abre la ventana. Devuelve False si tkinter o la pantalla no están disponibles."""
+    """Abre la ventana. Devuelve False si tkinter o la pantalla no están disponibles.
+
+    tkinter se importa AQUÍ y no al inicio del archivo: así el modo terminal
+    y el modo --pruebas funcionan aunque este Python no traiga tkinter.
+    """
     try:
         import tkinter
+    except ImportError:
+        print("No se pudo abrir la interfaz gráfica: este Python no incluye tkinter.")
+        print("Si la necesita, instale Python desde python.org (ya trae tkinter).")
+        return False
+    try:
         raiz = tkinter.Tk()
-    except Exception as error:
-        # ImportError si falta tkinter; TclError si no hay pantalla gráfica.
-        print("No se pudo abrir la interfaz gráfica (%s)." % error)
+    except tkinter.TclError as error:
+        # Pasa, por ejemplo, en un servidor sin pantalla gráfica.
+        print("No se pudo abrir la interfaz gráfica: no hay una pantalla "
+              "disponible (%s)." % error)
         return False
     VentanaRecomendador(tkinter, raiz)
     try:
         raiz.mainloop()
     except KeyboardInterrupt:
-        print("Programa terminado por el usuario. ¡Hasta pronto!")
+        print("Consulta cancelada. ¡Hasta pronto!")
     return True
 
 
@@ -1016,7 +1163,8 @@ def iniciar_interfaz_grafica():
 def modo_consola():
     """Ciclo de la consola: aviso, preguntas, evaluación, explicación e historial."""
     try:
-        print(colorear("SISTEMA EXPERTO: RECOMENDADOR DE RUTINA DE EJERCICIO", "titulo"))
+        print(color("SISTEMA EXPERTO %s RECOMENDADOR DE RUTINA DE EJERCICIO"
+                    % SIMBOLOS["punto"], "titulo"))
         while True:
             mostrar_aviso()
             respuestas = hacer_consulta()
@@ -1024,7 +1172,7 @@ def modo_consola():
             mostrar_resultado(resultado)
             explicar(resultado)
             if guardar_historial(respuestas, resultado):
-                print(colorear("Consulta guardada en %s." % ARCHIVO_HISTORIAL, "tenue"))
+                print(color("Consulta guardada en %s." % ARCHIVO_HISTORIAL, "tenue"))
             print()
             mostrar_aviso()
             print()
@@ -1035,20 +1183,37 @@ def modo_consola():
     except (KeyboardInterrupt, EOFError):
         # Ctrl+C o fin de entrada: se sale con un mensaje, sin traceback.
         print()
-        print("Programa terminado por el usuario. ¡Hasta pronto!")
+        print("Consulta cancelada. ¡Hasta pronto!")
 
 
 def main():
     """Elige el modo según la opción de la línea de comandos."""
+    global USAR_COLORES
+    # Si la salida no admite algún carácter (por ejemplo, al redirigir a un
+    # archivo en Windows), se reemplaza por "?" en vez de detener el programa.
+    try:
+        sys.stdout.reconfigure(errors="replace")
+    except (AttributeError, ValueError):
+        pass
+
     argumentos = sys.argv[1:]
     if "--pruebas" in argumentos:
+        # Las pruebas se imprimen siempre sin colores (salida comparable).
+        USAR_COLORES = False
         sys.exit(ejecutar_pruebas())
     if "--gui" in argumentos:
         if iniciar_interfaz_grafica():
             return
-        print("Se usará la versión de consola.")
+        print("El programa continúa en modo terminal.")
+        print()
     modo_consola()
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except BrokenPipeError:
+        # La salida se cerró antes de tiempo (por ejemplo, "... | head").
+        # Se redirige a os.devnull para terminar sin mostrar un traceback.
+        os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+        sys.exit(1)

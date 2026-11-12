@@ -10,7 +10,7 @@
 
 ## a) Fuentes consultadas
 
-Abrí y leí cada una de estas páginas el **12/11/2026**. En cada caso comprobé el título, la organización y el enlace.
+Abrí y leí cada una de estas páginas el **11/11/2026** (entre las 21:42 y las 21:44, hora de Costa Rica). En cada caso comprobé el título, la organización y el enlace.
 
 | ID | Título | Autor / organización | Enlace | Fecha de la fuente | Criterio que aporta |
 |----|--------|----------------------|--------|--------------------|---------------------|
