@@ -1,0 +1,10 @@
+# Historial generado al ejecutar el programa (no se entrega)
+historial_consultas.csv
+
+# Python
+__pycache__/
+*.pyc
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
