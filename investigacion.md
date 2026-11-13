@@ -2,7 +2,7 @@
 
 **Tema n.º 4:** Recomendador de rutina de ejercicio (plan general según objetivo, nivel y tiempo).
 **Curso:** CIA02 – Introducción a la Inteligencia Artificial, Universidad Creativa.
-**Autor:** Daniela Arce · **Fecha:** 12 de noviembre de 2026
+**Autor:** Daniela Arce Orozco · **Fecha:** 12 de noviembre de 2026
 
 > **Aviso:** el sistema da consejos generales de actividad física. No son consejos médicos y no sustituyen a un profesional de la salud.
 

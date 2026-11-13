@@ -1,5 +1,5 @@
 # =============================================================================
-# Nombre:  Daniela Arce
+# Nombre:  Daniela Arce Orozco
 # Curso:   CIA02 - Introducción a la Inteligencia Artificial (Universidad Creativa)
 # Tarea 1: Sistema Experto Basado en Reglas
 # Tema 4:  Recomendador de rutina de ejercicio (plan general según objetivo,
