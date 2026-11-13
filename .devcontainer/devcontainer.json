@@ -1,0 +1,10 @@
+{
+  "name": "Tarea 1 - sistema experto",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "features": {
+    "ghcr.io/devcontainers/features/desktop-lite:1": {}
+  },
+  "forwardPorts": [6080],
+  "portsAttributes": { "6080": { "label": "Escritorio (noVNC)" } },
+  "postCreateCommand": "python -c 'import tkinter' || (sudo apt-get update && sudo apt-get install -y python3-tk)"
+}
