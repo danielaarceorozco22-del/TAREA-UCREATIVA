@@ -1,5 +1,5 @@
 # =============================================================================
-# Nombre:  APELLIDO_NOMBRE
+# Nombre:  Daniela_Arce
 # Curso:   CIA02 - Introducción a la Inteligencia Artificial (Universidad Creativa)
 # Tarea 1: Sistema Experto Basado en Reglas
 # Tema 4:  Recomendador de rutina de ejercicio (plan general según objetivo,
@@ -10,9 +10,6 @@
 #   python apellido_nombre_tarea1.py            -> consulta interactiva
 #   python apellido_nombre_tarea1.py --pruebas  -> ejecuta los casos de prueba
 #   python apellido_nombre_tarea1.py --gui      -> interfaz gráfica (tkinter)
-#
-# Solo usa la biblioteca estándar de Python 3.
-# Las fuentes y las reglas en lenguaje natural están en investigacion.md.
 # =============================================================================
 
 import csv
