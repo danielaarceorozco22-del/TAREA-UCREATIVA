@@ -1,5 +1,5 @@
 # =============================================================================
-# Nombre:  Daniela_Arce
+# Nombre:  Daniela Arce
 # Curso:   CIA02 - Introducción a la Inteligencia Artificial (Universidad Creativa)
 # Tarea 1: Sistema Experto Basado en Reglas
 # Tema 4:  Recomendador de rutina de ejercicio (plan general según objetivo,
@@ -7,9 +7,9 @@
 # Fecha:   12 de noviembre de 2026
 #
 # Uso:
-#   python apellido_nombre_tarea1.py            -> consulta interactiva
-#   python apellido_nombre_tarea1.py --pruebas  -> ejecuta los casos de prueba
-#   python apellido_nombre_tarea1.py --gui      -> interfaz gráfica (tkinter)
+#   python arce_daniela_tarea1.py            -> consulta interactiva
+#   python arce_daniela_tarea1.py --pruebas  -> ejecuta los casos de prueba
+#   python arce_daniela_tarea1.py --gui      -> interfaz gráfica (tkinter)
 # =============================================================================
 
 import csv
@@ -815,7 +815,7 @@ def explicar(resultado):
 
 
 # -----------------------------------------------------------------------------
-# 8. CASOS DE PRUEBA (modo: python apellido_nombre_tarea1.py --pruebas)
+# 8. CASOS DE PRUEBA (modo: python arce_daniela_tarea1.py --pruebas)
 # -----------------------------------------------------------------------------
 # Cada caso tiene las respuestas (como hechos) y el resultado esperado: una
 # lista de (conclusión, certeza) en el orden en que deben aparecer.
@@ -922,7 +922,7 @@ def ejecutar_pruebas():
 
 
 # -----------------------------------------------------------------------------
-# 9. INTERFAZ GRÁFICA (modo: python apellido_nombre_tarea1.py --gui)
+# 9. INTERFAZ GRÁFICA (modo: python arce_daniela_tarea1.py --gui)
 # -----------------------------------------------------------------------------
 # Ventana sencilla hecha con tkinter, que viene incluido con Python (biblioteca
 # estándar). Usa los mismos datos (PREGUNTAS, REGLAS) y las mismas funciones
